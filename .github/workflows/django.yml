@@ -9,14 +9,34 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         python-version: [3.13]
 
-    steps:
-      - uses: actions/checkout@v4
+    services:
+      mysql:
+        image: mysql:8.0
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: test_pass
 
-      - name: Set up Python ${{ matrix.python-version }}
+    env:
+      DB_NAME: test_db
+      DB_USER: test_user
+      DB_PASSWORD: test_pass
+      DB_HOST: localhost
+      DB_PORT: 3306
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
@@ -27,6 +47,8 @@ jobs:
           pip install -r requirements_dev.txt
           pre-commit install
 
+      - name: Set up Database
+        
       - name: Run Linter
         run: |
           pre-commit run ruff-check --all-files
@@ -37,4 +59,5 @@ jobs:
 
       - name: Run Tests
         run: |
+          python manage.py migrate
           python manage.py test
