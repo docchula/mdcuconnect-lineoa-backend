@@ -10,10 +10,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        python-version: [3.13]
-
     services:
       mysql:
         image: mysql:8.0
@@ -42,7 +38,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.13
 
       - name: Install Dependencies
         run: |
