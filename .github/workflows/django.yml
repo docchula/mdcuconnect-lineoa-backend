@@ -28,7 +28,7 @@ jobs:
       DB_NAME: test_db
       DB_USER: test_user
       DB_PASSWORD: test_pass
-      DB_HOST: 127.0.0.1
+      DB_HOST: mysql
       DB_PORT: 3306
 
     steps:
@@ -50,14 +50,13 @@ jobs:
         run: |
           echo "Waiting for MySQL service..."
           for i in {1..30}; do
-            mysql -h127.0.0.1 -P3306 -utest_user -ptest_pass -e "SELECT 1;" && break
+            mysql -hmysql -P3306 -utest_user -ptest_pass -e "SELECT 1;" && break
+            echo "MySQL not ready, retrying..."
             sleep 2
           done
 
       - name: Migrate Database
-        run: |
-          python manage.py migrate
+        run: python manage.py migrate
 
       - name: Run Tests
-        run: |
-          python manage.py test
+        run: python manage.py test
