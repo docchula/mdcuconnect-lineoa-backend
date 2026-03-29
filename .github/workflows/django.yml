@@ -14,26 +14,20 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: test_db
-          MYSQL_USER: test_user
-          MYSQL_PASSWORD: test_pass
-        options: >-
-          --health-cmd "mysqladmin ping -h localhost -uroot -proot"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      DB_NAME: test_db
-      DB_USER: test_user
-      DB_PASSWORD: test_pass
-      DB_HOST: mysql
-      DB_PORT: 3306
+          MYSQL_DATABASE: mdcuconnect_test
+          MYSQL_ROOT_PASSWORD: testrootpass
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Install Ubuntu dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install libcurl4-openssl-dev libmysqlclient-dev libgirepository1.0-dev
 
       - name: Set up Python
         uses: actions/setup-python@v3
@@ -46,17 +40,13 @@ jobs:
           pip install -r requirements.txt
           pip install mysqlclient
 
-      - name: Wait for MySQL to be ready
-        run: |
-          echo "Waiting for MySQL service..."
-          for i in {1..30}; do
-            mysql -hmysql -P3306 -utest_user -ptest_pass -e "SELECT 1;" && break
-            echo "MySQL not ready, retrying..."
-            sleep 2
-          done
-
-      - name: Migrate Database
-        run: python manage.py migrate
-
       - name: Run Tests
-        run: python manage.py test
+        env:
+          DB_NAME: mdcuconnect_test
+          DB_USER: root
+          DB_PASSWORD: testrootpass
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+        run: |
+          python manage.py migrate
+          python manage.py test
