@@ -1,0 +1,5 @@
+Django==6.0.3
+djangorestframework==3.17.1
+mysqlclient==2.2.8
+dotenv==0.9.9
+line-bot-sdk==3.22.0
