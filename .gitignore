@@ -4,3 +4,6 @@ venv/
 
 # environment
 .env
+
+# macOS
+**/.DS_Store
