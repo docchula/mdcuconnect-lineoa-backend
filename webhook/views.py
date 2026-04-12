@@ -1,20 +1,17 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from linebot.v3.exceptions import InvalidSignatureError
-from .handlers import handler
+from .tasks import handle_webhook
+
+
+X_LINE_SIGNATURE_KEY = "x-line-signature"
 
 
 class Callback(APIView):
     def post(self, request):
-        signature = request.headers["X-Line-Signature"]
+        signature = request.headers.get(X_LINE_SIGNATURE_KEY, "")
         body = request.body.decode("utf-8")
 
-        try:
-            handler.handle(body, signature)
-        except InvalidSignatureError:
-            return Response(
-                {"message": "invalid signature"}, status=status.HTTP_400_BAD_REQUEST
-            )
+        handle_webhook.delay(body, signature)
 
         return Response(status=status.HTTP_200_OK)

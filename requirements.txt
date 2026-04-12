@@ -1,5 +1,18 @@
+# python django
 Django==6.0.3
 djangorestframework==3.17.1
-mysqlclient==2.2.8
 dotenv==0.9.9
+
+# database mysql
+mysqlclient==2.2.8
+
+# line oa
 line-bot-sdk==3.22.0
+
+# redis
+redis==7.4.0
+django-redis==6.0.0
+
+# celery
+celery==5.6.3
+django-celery-results==2.6.0
