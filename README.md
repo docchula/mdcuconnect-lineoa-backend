@@ -97,3 +97,11 @@ you should see the quick tunnel url. For example: https://combination-grades-tra
 3. Copy the quick tunnel url and paste it in LINE OA webhook url, also append `/webhook/callback/` at the end of the quick tunnel url. For example: https://combination-grades-track-thesaurus.trycloudflare.com/webhook/callback/
 
 4. At this point, you should be able to interact with the LINE OA
+
+### Run celery
+1. Open a new terminal and active the environment
+
+2. Run the following command:
+```bash
+celery -A website worker -l info
+```
