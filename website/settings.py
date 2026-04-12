@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django_celery_results",
     "webhook",
+    "profiles",
 ]
 
 MIDDLEWARE = [
@@ -181,6 +182,7 @@ CACHES = {
     },
 }
 
+
 # Celery
 
 CELERY_BROKER_URL = REDIS_HOST + "/1"
@@ -191,3 +193,8 @@ CELERY_TASK_SERIALIZER = "json"
 
 CELERY_TIMEZONE = "Asia/Bangkok"
 CELERY_ENABLE_UTC = True
+
+
+# LIFF
+
+LIFF_URL = os.getenv("LIFF_URL", "")
