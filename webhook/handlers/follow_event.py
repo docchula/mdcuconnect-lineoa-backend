@@ -1,7 +1,7 @@
 from linebot.v3.webhooks import FollowEvent
-from linebot.v3.messaging import ApiClient, MessagingApi
+from linebot.v3.messaging import ApiClient, MessagingApi, ReplyMessageRequest
 from .base import handler, configuration
-from webhook.utils import build_text_messages, reply_messages
+from webhook.utils import build_text_messages
 from webhook.constants import Message, RichMenuNameEnum
 from webhook.models import RichMenu
 from profiles.models import Profile
@@ -23,9 +23,13 @@ def handle_follow(event):
             line_user_id, register_rich_menu.rich_menu_id
         )
 
-    Profile.objects.get_or_create(line_user_id=line_user_id)
+    profile, created = Profile.objects.get_or_create(line_user_id=line_user_id)
 
-    messages = build_text_messages(
-        Message.GREETING.format(line_profile.display_name), Message.REGISTER_PENDING
+    messages = [Message.GREETING.format(line_profile.display_name)]
+    if created or profile.student_id is None:
+        messages.append(Message.REGISTER_PENDING)
+
+    messages = build_text_messages(*messages)
+    line_bot_api.reply_message(
+        ReplyMessageRequest(replyToken=event.reply_token, messages=messages)
     )
-    reply_messages(configuration, event.reply_token, messages)

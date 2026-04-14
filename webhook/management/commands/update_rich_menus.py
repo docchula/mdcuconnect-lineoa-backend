@@ -7,10 +7,6 @@ from webhook.handlers.base import configuration
 from webhook.constants import RichMenuNameEnum, RICH_MENU_MAPPINGS
 from webhook.models import RichMenu
 import os
-import logging
-
-
-logger = logging.getLogger(__name__)
 
 
 NAME_KEY = "name"
@@ -46,17 +42,13 @@ class Command(BaseCommand):
         try:
             line_bot_api.validate_rich_menu_object(rich_menu_request)
         except ApiException:
-            logger.warning(
-                f"Invalid payload for rich menu '{rich_menu_name}', skip creation"
-            )
-            return
+            raise CommandError(f"Invalid payload for rich menu '{rich_menu_name}'")
 
         path_to_file = os.path.join(
             settings.BASE_DIR, "assets", "images", "rich_menus", f"{rich_menu_name}.jpg"
         )
         if not os.path.isfile(path_to_file):
-            logger.warning("Image for rich menu '{name}' not found, skip creation")
-            return
+            raise CommandError(f"Image for rich menu '{rich_menu_name}' not found")
 
         response = line_bot_api.create_rich_menu(rich_menu_request)
         rich_menu_id = response.rich_menu_id
@@ -72,4 +64,6 @@ class Command(BaseCommand):
             name=rich_menu_name, defaults={"rich_menu_id": rich_menu_id}
         )
 
-        logger.info(f"Rich menu '{rich_menu_name}' is created")
+        self.stdout.write(
+            self.style.SUCCESS(f"Rich menu '{rich_menu_name}' has been created")
+        )
