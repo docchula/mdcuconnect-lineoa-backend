@@ -1,7 +1,7 @@
 from celery import shared_task
 from linebot.v3.exceptions import InvalidSignatureError
-import logging
 from .handlers import handler
+import logging
 
 
 logger = logging.getLogger(__name__)
