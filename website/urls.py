@@ -21,4 +21,5 @@ from django.urls import path, include
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("webhook/", include("webhook.urls"), name="webhook"),
+    path("api/profile/", include("profiles.urls"), name="profiles"),
 ]
