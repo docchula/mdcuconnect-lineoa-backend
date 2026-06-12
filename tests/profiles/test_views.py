@@ -1,4 +1,6 @@
 from datetime import timedelta
+from unittest.mock import patch, MagicMock
+import urllib.error
 
 from django.test import TestCase
 from django.urls import reverse
@@ -89,3 +91,120 @@ class VerifyProfileViewTestCase(TestCase):
         self.assertEqual(profile.status, Profile.Status.VERIFIED)
         self.assertIsNone(profile.verification_token)
         self.assertIsNone(profile.verification_token_expires_at)
+
+
+class RegisterProfileViewTestCase(TestCase):
+    def setUp(self):
+        self.register_url = reverse("register-profile")
+
+    def test_register_profile_missing_fields(self):
+        """
+        When required fields are missing from the body,
+        the endpoint should return 400 Bad Request.
+        """
+        response = self.client.post(
+            self.register_url, {}, content_type="application/json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"error": "accessToken, studentId, and email are required."},
+        )
+
+    @patch("urllib.request.urlopen")
+    def test_register_profile_invalid_line_token(self, mock_urlopen):
+        """
+        When LINE API returns an error for the access token,
+        the endpoint should return 400 Bad Request.
+        """
+        # Mock HTTPError
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            url="https://api.line.me/v2/profile",
+            code=401,
+            msg="Unauthorized",
+            hdrs=None,
+            fp=None,
+        )
+
+        payload = {
+            "accessToken": "invalid_token",
+            "studentId": "6422781234",
+            "email": "test@example.com",
+        }
+        response = self.client.post(
+            self.register_url, payload, content_type="application/json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {"error": "Invalid LINE access token."})
+
+    @patch("urllib.request.urlopen")
+    def test_register_profile_success_new_profile(self, mock_urlopen):
+        """
+        When the access token is valid and fields are complete,
+        a new profile should be created in PENDING_VERIFICATION status.
+        """
+        # Mock successful LINE response
+        mock_response = MagicMock()
+        mock_response.read.return_value = (
+            b'{"userId": "U_test_user_123", "displayName": "Test User"}'
+        )
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        payload = {
+            "accessToken": "valid_token",
+            "studentId": "6422781234",
+            "email": "test@example.com",
+        }
+        response = self.client.post(
+            self.register_url, payload, content_type="application/json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            response.json()["message"],
+            "Registration successful. Please verify your email.",
+        )
+
+        # Check database
+        profile = Profile.objects.get(line_user_id="U_test_user_123")
+        self.assertEqual(profile.student_id, "6422781234")
+        self.assertEqual(profile.email, "test@example.com")
+        self.assertEqual(profile.status, Profile.Status.PENDING_VERIFICATION)
+        self.assertIsNotNone(profile.verification_token)
+        self.assertIsNotNone(profile.verification_token_expires_at)
+
+    @patch("urllib.request.urlopen")
+    def test_register_profile_success_existing_profile(self, mock_urlopen):
+        """
+        When the profile already exists, registration should update the details and return 200 OK.
+        """
+        # Arrange: create an existing profile
+        existing_profile = Profile.objects.create(
+            line_user_id="U_existing_user",
+            student_id="old_id",
+            email="old@example.com",
+            status=Profile.Status.VERIFIED,
+        )
+
+        # Mock successful LINE response
+        mock_response = MagicMock()
+        mock_response.read.return_value = (
+            b'{"userId": "U_existing_user", "displayName": "Existing User"}'
+        )
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        payload = {
+            "accessToken": "valid_token",
+            "studentId": "new_id",
+            "email": "new@example.com",
+        }
+        response = self.client.post(
+            self.register_url, payload, content_type="application/json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Check database
+        existing_profile.refresh_from_db()
+        self.assertEqual(existing_profile.student_id, "new_id")
+        self.assertEqual(existing_profile.email, "new@example.com")
+        self.assertEqual(existing_profile.status, Profile.Status.PENDING_VERIFICATION)
+        self.assertIsNotNone(existing_profile.verification_token)
