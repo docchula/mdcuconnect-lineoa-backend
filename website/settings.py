@@ -14,14 +14,14 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 import os
-
+import sys
 
 load_dotenv()
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+load_dotenv(BASE_DIR / ".env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "django_celery_results",
     "webhook",
     "profiles",
+    "website",
 ]
 
 MIDDLEWARE = [
@@ -85,8 +86,8 @@ WSGI_APPLICATION = "website.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": os.getenv("DB_NAME", ""),
-        "USER": os.getenv("DB_USER", ""),
+        "NAME": os.getenv("DB_NAME", "mdcu_local_db"),
+        "USER": os.getenv("DB_USER", "root"),
         "PASSWORD": os.getenv("DB_PASSWORD", ""),
         "HOST": os.getenv("DB_HOST", ""),
         "PORT": os.getenv("DB_PORT", ""),
@@ -201,3 +202,48 @@ CELERY_ENABLE_UTC = True
 # LIFF
 
 LIFF_URL = os.getenv("LIFF_URL", "")
+
+# ===============================================================================
+# EMAIL CONFIGURATION (SECURE TLS)
+# ==============================================================================
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' #
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+
+
+# existing CACHES configuration using django-redis might look like:
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django_redis.cache.RedisCache",
+#         "LOCATION": os.environ.get("REDIS_URL"),
+#         "OPTIONS": {...},
+#     }
+# }
+
+# Replace/augment with a safe fallback:
+REDIS_URL = os.environ.get("REDIS_URL")
+
+if "test" in sys.argv or not REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-test-cache",
+        }
+    }
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+        }
+    }

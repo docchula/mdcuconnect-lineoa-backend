@@ -105,3 +105,80 @@ you should see the quick tunnel url. For example: https://combination-grades-tra
 ```bash
 celery -A website worker -l info
 ```
+#-----------------------------------------------
+#Task 3 
+Background task for email verification use celery and redis
+Celery>>Task queue
+Redis>>Message Broker
+
+
+1.**local setup
+'''bash
+source venv/Scripts/activate
+pip install -r requirements.txt
+
+2.setup env. (gmail app password as EMAIL_HOST_PASSWORD)
+DB_NAME=
+DB_USERNAME=
+DB_PASSWORD=
+DB_HOST=
+DB_PORT=
+
+LINE_CHANNEL_ID=
+LINE_CHANNEL_SECRET=
+LINE_CHANNEL_ACCESS_TOKEN=
+
+REDIS_HOST=redis://localhost:6379
+
+LIFF_URL=
+
+# ====== Email setting ======
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
+EMAIL_USE_TLS=TRUE
+
+3.run redis 
+install and set up docker for redis 
+
+docker run -d -p 6379:6379 --name redis-mdcu redis
+
+4.run celery worker
+(new terminal)
+'''bash
+celery -A website worker --loglevel=info --pool=threads 
+
+5.Django shell 
+'''bash
+
+python manage.py shell
+-> test without database and celery
+ send_mail(
+    subject="Test Email",
+    message="Hello from Django",
+    from_email=settings.EMAIL_HOST_USER,
+    ["your_email@gmail.com"],
+    fail_silently=False
+    )
+
+-> test with database 
+python manage.py migrate
+python manage.py shell
+
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.conf import settings
+
+User = get_user_model()
+user = User.objects.first()
+
+print(user)
+-->(('user name'))
+print(user.email)
+-->(('first user email'))
+
+from website.tasks import send_verification_email_task
+send_verification_email_task.delay(recipient_email=user.email,subject="test email",content="hello!")
+
+#-------------------------------------------------------------------------------------
